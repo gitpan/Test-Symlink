@@ -1,0 +1,15 @@
+---
+name: Test-Symlink
+version: 0.01
+author:
+  - Nik Clayton <nik@FreeBSD.org>
+abstract: Test::Builder based test for symlink correctness
+license: bsd
+requires:
+  Test::More: 0
+  Test::Tester: 0.102
+provides:
+  Test::Symlink:
+    file: lib/Test/Symlink.pm
+    version: 0.01
+generated_by: Module::Build version 0.2611
