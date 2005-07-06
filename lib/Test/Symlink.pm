@@ -27,6 +27,8 @@ package Test::Symlink;
 use warnings;
 use strict;
 
+use Test::Builder;
+
 require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT = qw(symlink_ok);
@@ -50,50 +52,54 @@ Test::Symlink - Test::Builder based test for symlink correctness
 
 =head1 VERSION
 
-Version 0.01
+Version 0.02
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 =head1 SYNOPSIS
 
-Test::Symlink exports C<symlink_ok()> for testing the correctness of
-symlinks.  Test::Symlink uses Test::Builder, so plays nicely with
-Test::Simple, Test::More, and other Test::Builder based modules.
+    use Test::Symlink tests => 3;
+
+    symlink_ok('foo', 'bar', 'foo links to bar');
+    symlink_ok('foo' => 'bar', 'Use fat comma for visual clarity');
+
+    # The test name is optional
+    symlink_ok('foo' => 'bar') # ok 3 - Symlink: foo -> bar
+
+Test::Symlink B<automatically> exports C<symlink_ok()> for testing 
+the correctness of symlinks.  Test::Symlink uses Test::Builder, so 
+plays nicely with Test::Simple, Test::More, and other Test::Builder 
+based modules.
 
 =head1 FUNCTIONS
 
-=head2 symlink_ok($src, $dst, $name);
+=head2 symlink_ok($src, $dst, [ $test_name ]);
 
 Verifies that $src exists, and is a symlink to $dst.
 
 Does B<not> verify that $dst exists, as this is legal, and there is at
 least one valid usage of this that I'm aware of (F</etc/malloc.conf> on
-FreeBSD).
+FreeBSD).  If you want to ensure that the destination exists then write
+this as two tests.  For example:
 
-The test name (C<$name>) is optional.  If it is omitted then a sensible
-test name will be generated.
+    ok(-e $dst, "$dst exists");
+    symlink_ok($src, $dst, "  ... and $src links to it");
 
-    use Test::Symlink;
-
-    symlink_ok('/etc/rc2.d/S72sshd', '/etc/init.d/sshd',
-        'sshd starts at run-level 2');
-
-    symlink_ok('/etc/rc2.d/S72sshd', '/etc/init.d/sshd');
+The test name (C<$test_name>) is optional.  If it is omitted then a test 
+name of the form "Symlink: $src -> $dst" is used.
 
 Perl's fat comma operator can be usefully used as an visual aid.
 
-    symlink_ok('/etc/rc2.d/S72sshd' => /etc/init.d/sshd',
-        'sshd starts at run-level 2');
-
-The test will be skipped on systems that do not support symlinks.  However,
-the arguments to symlink_ok() will still be checked for sanity.
+The test will be skipped on systems that do not support symlinks.  
+However, the arguments to symlink_ok() will still be checked to ensure
+that they are defined and non-empty.
 
 =cut
 
 sub symlink_ok {
-  my($src, $dst, $name) = @_;
+  my($src, $dst, $test_name) = @_;
 
   if(! defined $src or $src eq '') {
     my $ok = $Test->ok(0, 'symlink_ok()');
@@ -107,7 +113,7 @@ sub symlink_ok {
     return $ok;
   }
 
-  $name = "Symlink: $src -> $dst" unless defined $name;
+  $test_name = "Symlink: $src -> $dst" unless defined $test_name;
 
   if(! $Symlinks) {
     return $Test->skip('symlinks are not supported on this platform');
@@ -117,27 +123,27 @@ sub symlink_ok {
   # exist you have to do the -e check, and you have to readlink() to make
   # sure it really doesn't exist.
   if(! -e $src and ! defined readlink($src)) {
-    my $ok = $Test->ok(0, $name);
+    my $ok = $Test->ok(0, $test_name);
     $Test->diag("    $src does not exist");
     return $ok;
   }
 
   if(! -l $src) {
-    my $ok = $Test->ok(0, $name);
+    my $ok = $Test->ok(0, $test_name);
     $Test->diag("    $src exists, but is not a symlink");
     return $ok;
   }
 
   my $act_dst;
   if(($act_dst = readlink($src)) ne $dst) {
-    my $ok = $Test->ok(0, $name);
+    my $ok = $Test->ok(0, $test_name);
     $Test->diag("    $src is not a symlink to $dst");
     $Test->diag("         got: $src -> $act_dst");
     $Test->diag("    expected: $src -> $dst");
     return $ok;
   }
 
-  return $Test->ok(1, $name);
+  return $Test->ok(1, $test_name);
 }
 
 =head1 AUTHOR
